@@ -1,0 +1,14 @@
+Name:          App-Persistent-Client
+Version:       0.1
+Description:   Talk to an App::Persistent app
+License:       BSD3
+License-file:  LICENSE
+Author:        Jonathan Rockway
+Maintainer:    jon@jrock.us
+Build-Type:    Simple
+Cabal-Version: >= 1.2
+Executable pclient
+  Main-is: pclient.hs
+  Other-Modules: App.Persistent.Client.Message
+  Build-Depends: base, network, json
+  ghc-options:   -O
