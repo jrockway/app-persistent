@@ -33,7 +33,7 @@ serializeMessage :: Message -> String
 serializeMessage = (jsonForNetwork . messageToJSON)
 
 -- read Messages
-
+parseMessage_ :: JSValue -> JSValue -> Either String Message
 parseMessage_ (JSString t) (JSString v)
     | fromJSString t == "normalOutput" = Right $ NormalOutput (fromJSString v)
     | fromJSString t == "errorOutput"  = Right $ ErrorOutput  (fromJSString v)
@@ -47,14 +47,13 @@ parseMessage json =
       Nothing -> Left "Invalid message content "
       Just (t, v) -> parseMessage_ t v
 
--- --
 findNecessaryKeys :: [(String, a)] -> Maybe (a, a)
 findNecessaryKeys obj = do
   t <- lookup "type" obj
   v <- lookup "value" obj
   return (t, v)
 
--- unserializeMessage :: String -> Either String Message
+unserializeMessage :: String -> Either String Message
 unserializeMessage str = do
   json <- resultToEither (decode str)
   parseMessage json
