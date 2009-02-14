@@ -36,8 +36,19 @@ sub reader {
         when('exit'){
             $exit->send(0);
         }
+        when('keyPress') {
+            $handle->push_write( json => {
+                type  => 'normalOutput',
+                value => chr $value,
+            });
+            $handle->push_write( "\r\n" );
+            $handle->push_read( json => \&reader );
+        }
         default {
-            $handle->push_write( json => $obj );
+            $handle->push_write( json => {
+                type  => 'errorOutput',
+                value => 'unknown command',
+            });
             $handle->push_write( "\r\n" );
             $handle->push_read( json => \&reader );
         }

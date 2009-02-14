@@ -14,10 +14,15 @@ startLoop h p = do
   forkIO $ wait
   forkIO $ parse
 
-parseInput :: ( Message -> IO () ) -> Char -> IO ()
-parseInput callback c = do
-  putStrLn ("Got input: " ++ show c)
-  callback (KeyPress c)
+handleNetwork :: String -> IO ()
+handleNetwork line =
+    case unserializeMessage line of
+      Right message ->
+          case message of
+            NormalOutput str -> hPutStr stdout str
+            ErrorOutput  str -> hPutStr stderr str
+      Left error ->
+          hPutStrLn stderr ("** Internal error: " ++ error)
 
 sendMessage :: Handle -> Message -> IO ()
 sendMessage server msg = hPutStrLn server $ serializeMessage msg
@@ -30,8 +35,8 @@ main = do
   server <- connectTo "localhost" (PortNumber 1234)
   hSetBuffering server NoBuffering
 
-  startLoop (hGetChar stdin) (parseInput (sendMessage server))
-  startLoop (hGetLine server) (putStrLn)
+  startLoop (hGetChar stdin) (\c -> sendMessage server (KeyPress c))
+  startLoop (hGetLine server) handleNetwork
 
   exit <- newEmptyMVar
   takeMVar exit
