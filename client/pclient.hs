@@ -1,8 +1,9 @@
 module Main where
-import Network
-import System.IO
 import Control.Concurrent
 import Control.Monad
+import Network
+import System.Exit
+import System.IO
 
 import App.Persistent.Client.Message
 
@@ -14,7 +15,7 @@ startLoop h p = do
   forkIO $ wait
   forkIO $ parse
 
-handleNetwork :: MVar Integer -> String -> IO ()
+handleNetwork :: MVar Int -> String -> IO ()
 handleNetwork exit line =
     case unserializeMessage line of
       Right message ->
@@ -42,4 +43,7 @@ main = do
   startLoop (hGetLine server) (handleNetwork exit)
 
   exitCode <- takeMVar exit
-  putStrLn $ "Bye " ++ (show exitCode)
+  putStrLn $ "Bye (" ++ (show exitCode) ++ ")"
+  exitWith $ case exitCode of
+               0 -> ExitSuccess
+               _ -> ExitFailure exitCode

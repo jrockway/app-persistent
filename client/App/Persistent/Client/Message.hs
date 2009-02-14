@@ -15,7 +15,7 @@ import Text.JSON.Types
 data Message = KeyPress Char
              | NormalOutput String
              | ErrorOutput String
-             | Exit Integer
+             | Exit Int
              -- | Startup [(String, String)] [String]
                deriving (Show, Eq)
 
@@ -38,7 +38,7 @@ parseMessage_ (JSString t) (JSString v)
     | fromJSString t == "normalOutput" = Right $ NormalOutput (fromJSString v)
     | fromJSString t == "errorOutput"  = Right $ ErrorOutput  (fromJSString v)
 parseMessage_ (JSString t) (JSRational _ v)
-    | fromJSString t == "exit" = Right $ Exit (numerator v)
+    | fromJSString t == "exit" = Right $ Exit (truncate v)
 parseMessage_ _ _ = Left "Parse error: no pattern match"
 
 parseMessage :: JSObject JSValue -> Either String Message
