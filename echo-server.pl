@@ -17,6 +17,7 @@ my $s = tcp_server undef, 1234, sub {
         fh => $fh,
     );
 
+    my $line_count = 0;
     my $buf = "";
     my $reader;
     $reader = sub {
@@ -29,19 +30,13 @@ my $s = tcp_server undef, 1234, sub {
         }
 
         given($type){
-            when('exit'){
-                $exit->send(0);
-            }
             when('keyPress') {
                 my $char = chr $value;
                 given($char){
                     when("\n"){
-                        $handle->push_write( json => {
-                            type  => 'normalOutput',
-                            value => "$buf\n",
-                        });
-                        $handle->push_write( "\r\n" );
+                        push_write($handle, 'normalOutput', "$buf\n");
                         $buf = "";
+                        $line_count++;
                     }
                     default {
                         $buf .= chr $value;
@@ -50,18 +45,26 @@ my $s = tcp_server undef, 1234, sub {
 
                 $handle->push_read( json => $reader );
             }
-            default {
-                $handle->push_write( json => {
-                    type  => 'errorOutput',
-                    value => 'unknown command',
-                });
-                $handle->push_write( "\r\n" );
-                $handle->push_read( json => $reader );
-            }
         }
+
+        if($line_count > 5){
+            # fake an exit
+            push_write($handle, 'exit', 0);
+        }
+
+        $handle->push_read( json => $reader );
     };
 
     $handle->push_read( json => $reader );
 };
+
+sub push_write {
+    my ($handle, $t, $v) = @_;
+    $handle->push_write( json => {
+        type  => $t,
+        value => $v,
+    });
+    $handle->push_write( "\r\n" );
+}
 
 exit $exit->recv;

@@ -5,16 +5,17 @@ module App.Persistent.Client.Message
      unserializeMessage,
     ) where
 
-import Control.Monad
 import Data.Char
 import Data.Either
+import Data.Ratio
 import Text.JSON
 import Text.JSON.Types
-import Text.JSON.String
+
 
 data Message = KeyPress Char
              | NormalOutput String
              | ErrorOutput String
+             | Exit Integer
              -- | Startup [(String, String)] [String]
                deriving (Show, Eq)
 
@@ -32,26 +33,28 @@ serializeMessage :: Message -> String
 serializeMessage = (jsonForNetwork . messageToJSON)
 
 -- read Messages
-parseMessage :: [(String, JSString)] -> Either String Message
-parseMessage obj =
-    case findNecessaryKeys obj of
-      Nothing -> Left "Invalid message content"
+
+parseMessage_ (JSString t) (JSString v)
+    | fromJSString t == "normalOutput" = Right $ NormalOutput (fromJSString v)
+    | fromJSString t == "errorOutput"  = Right $ ErrorOutput  (fromJSString v)
+parseMessage_ (JSString t) (JSRational _ v)
+    | fromJSString t == "exit" = Right $ Exit (numerator v)
+parseMessage_ _ _ = Left "Parse error: no pattern match"
+
+parseMessage :: JSObject JSValue -> Either String Message
+parseMessage json =
+    case findNecessaryKeys (fromJSObject json) of
+      Nothing -> Left "Invalid message content "
       Just (t, v) -> parseMessage_ t v
 
-parseMessage_ :: String -> String -> Either String Message
-parseMessage_ t v =
-    case t of
-      "normalOutput" -> Right (NormalOutput v)
-      "errorOutput"  -> Right (ErrorOutput v)
-      otherwise      -> Left ("Unknown message type '" ++ t ++ "'")
-
-findNecessaryKeys :: [(String, JSString)] -> Maybe (String, String)
+-- --
+findNecessaryKeys :: [(String, a)] -> Maybe (a, a)
 findNecessaryKeys obj = do
   t <- lookup "type" obj
   v <- lookup "value" obj
-  return (fromJSString t, fromJSString v)
+  return (t, v)
 
-unserializeMessage :: String -> Either String Message
+-- unserializeMessage :: String -> Either String Message
 unserializeMessage str = do
   json <- resultToEither (decode str)
-  parseMessage (fromJSObject json)
+  parseMessage json
