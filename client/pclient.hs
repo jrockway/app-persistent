@@ -13,7 +13,7 @@ data EventHandler a =
 
 startLoop :: IO a -> EventHandler a -> IO ThreadId
 startLoop reader handler  = do
-  input <- newChan -- of type Just a
+  input <- newChan :: IO (Chan (Maybe a))
   let wait = do
         c <- (reader >>= (\x -> return $ Just x)) `catch` eofHandler
         writeChan input c
