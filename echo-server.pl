@@ -17,7 +17,6 @@ my $s = tcp_server undef, 1234, sub {
         fh => $fh,
     );
 
-    my $line_count = 0;
     my $buf = "";
     my $reader;
     $reader = sub {
@@ -36,20 +35,16 @@ my $s = tcp_server undef, 1234, sub {
                     when("\n"){
                         push_write($handle, 'normalOutput', "$buf\n");
                         $buf = "";
-                        $line_count++;
                     }
                     default {
                         $buf .= chr $value;
                     }
                 }
-
-                $handle->push_read( json => $reader );
             }
-        }
-
-        if($line_count > 5){
-            # fake an exit
-            push_write($handle, 'exit', 0);
+            when('endOfFile'){
+                push_write($handle, 'normalOutput', 'Exiting...');
+                push_write($handle, 'exit', 0);
+            }
         }
 
         $handle->push_read( json => $reader );

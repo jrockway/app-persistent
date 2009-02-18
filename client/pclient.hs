@@ -4,16 +4,32 @@ import Control.Monad
 import Network
 import System.Exit
 import System.IO
+import System.IO.Error
 
 import App.Persistent.Client.Message
 
-startLoop :: IO a -> ( a -> IO () ) -> IO ThreadId
-startLoop h p = do
-  m <- newEmptyMVar
-  let wait  = do { c <- h; putMVar m c; wait }
-      parse = do { c <- takeMVar m; p c; parse }
-  forkIO $ wait
+data EventHandler a =
+    EventHandler { onRead :: ( a -> IO () ), onEof :: IO () }
+
+startLoop :: IO a -> EventHandler a -> IO ThreadId
+startLoop reader handler  = do
+  input <- newChan -- of type Just a
+  let wait = do
+        c <- (reader >>= (\x -> return $ Just x)) `catch` eofHandler
+        writeChan input c
+        case c of Just _ -> wait; Nothing -> return ();
+
+      parse = do
+        c <- readChan input
+        case c of
+          Just c -> (onRead handler) c >> parse
+          Nothing -> return ()
+
+      eofHandler e = if isEOFError e
+                     then onEof handler >> return Nothing
+                     else ioError e
   forkIO $ parse
+  forkIO $ wait
 
 handleNetwork :: MVar Int -> String -> IO ()
 handleNetwork exit line =
@@ -27,7 +43,7 @@ handleNetwork exit line =
           hPutStrLn stderr ("**Internal error: " ++ error)
 
 sendMessage :: Handle -> Message -> IO ()
-sendMessage server msg = hPutStrLn server $ serializeMessage msg
+sendMessage server msg = (hPutStrLn server) (serializeMessage msg)
 
 main = do
   putStrLn "Ready."
@@ -39,8 +55,13 @@ main = do
   server <- connectTo "localhost" (PortNumber 1234)
   hSetBuffering server NoBuffering
 
-  startLoop (hGetChar stdin) (\c -> sendMessage server (KeyPress c))
-  startLoop (hGetLine server) (handleNetwork exit)
+  startLoop (hGetChar stdin)
+            EventHandler { onRead = \c -> sendMessage server (KeyPress c),
+                           onEof  = sendMessage server (EndOfFile StdIn) }
+
+  startLoop (hGetLine server)
+            EventHandler { onRead = handleNetwork exit,
+                           onEof  = exitWith ExitSuccess }
 
   exitCode <- takeMVar exit
   putStrLn $ "Bye (" ++ (show exitCode) ++ ")"

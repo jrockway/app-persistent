@@ -1,6 +1,7 @@
 module App.Persistent.Client.Message
     (
      Message(..),
+     StandardDescriptor(..),
      serializeMessage,
      unserializeMessage,
     ) where
@@ -11,11 +12,14 @@ import Data.Ratio
 import Text.JSON
 import Text.JSON.Types
 
+data StandardDescriptor = StdIn | StdOut | StdErr | OtherDescriptor
+                        deriving (Show, Eq)
 
 data Message = KeyPress Char
              | NormalOutput String
              | ErrorOutput String
              | Exit Int
+             | EndOfFile StandardDescriptor
              -- | Startup [(String, String)] [String]
                deriving (Show, Eq)
 
@@ -25,6 +29,7 @@ makeBasicMessage t v = toJSObject [("type", toJSString t),("value", toJSString v
 -- write Messages
 messageToJSON :: Message -> JSObject JSString
 messageToJSON (KeyPress k) = makeBasicMessage "keyPress" (show $ ord k)
+messageToJSON (EndOfFile StdIn) = makeBasicMessage "endOfFile" "stdin"
 
 jsonForNetwork :: JSObject JSString -> String
 jsonForNetwork obj = (encode obj) ++ "\r\n"
@@ -54,6 +59,4 @@ findNecessaryKeys obj = do
   return (t, v)
 
 unserializeMessage :: String -> Either String Message
-unserializeMessage str = do
-  json <- resultToEither (decode str)
-  parseMessage json
+unserializeMessage str = resultToEither (decode str) >>= parseMessage
