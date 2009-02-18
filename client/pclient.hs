@@ -15,7 +15,7 @@ startLoop :: IO a -> EventHandler a -> IO ()
 startLoop reader handler  = do
   input <- newChan :: IO (Chan (Maybe a))
   let wait = do
-        c <- (reader >>= (\x -> return $ Just x)) `catch` eofHandler
+        c <- (reader >>= return . Just) `catch` eofHandler
         writeChan input c
         case c of Just _ -> wait; Nothing -> return ();
 
