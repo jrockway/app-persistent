@@ -11,7 +11,7 @@ import App.Persistent.Client.Message
 data EventHandler a =
     EventHandler { onRead :: ( a -> IO () ), onEof :: IO () }
 
-startLoop :: IO a -> EventHandler a -> IO ThreadId
+startLoop :: IO a -> EventHandler a -> IO ()
 startLoop reader handler  = do
   input <- newChan :: IO (Chan (Maybe a))
   let wait = do
@@ -30,6 +30,7 @@ startLoop reader handler  = do
                      else ioError e
   forkIO $ parse
   forkIO $ wait
+  return () -- no need to "leak" the ThreadId
 
 handleNetwork :: MVar Int -> String -> IO ()
 handleNetwork exit line =
