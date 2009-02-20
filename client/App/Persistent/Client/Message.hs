@@ -32,10 +32,10 @@ messageToJSON (KeyPress k) = makeBasicMessage "keyPress" (show $ ord k)
 messageToJSON (EndOfFile StdIn) = makeBasicMessage "endOfFile" "stdin"
 
 jsonForNetwork :: JSObject JSString -> String
-jsonForNetwork obj = (encode obj) ++ "\r\n"
+jsonForNetwork obj = encode obj ++ "\r\n"
 
 serializeMessage :: Message -> String
-serializeMessage = (jsonForNetwork . messageToJSON)
+serializeMessage = jsonForNetwork . messageToJSON
 
 -- read Messages
 parseMessage_ :: JSValue -> JSValue -> Either String Message

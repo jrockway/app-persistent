@@ -15,21 +15,21 @@ startLoop :: IO a -> EventHandler a -> IO ()
 startLoop reader handler  = do
   input <- newChan :: IO (Chan (Maybe a))
   let wait = do
-        c <- (reader >>= return . Just) `catch` eofHandler
+        c <- liftM Just reader `catch` eofHandler
         writeChan input c
         case c of Just _ -> wait; Nothing -> return ();
 
       parse = do
         c <- readChan input
         case c of
-          Just c -> (onRead handler) c >> parse
+          Just c -> onRead handler c >> parse
           Nothing -> return ()
 
       eofHandler e = if isEOFError e
                      then onEof handler >> return Nothing
                      else ioError e
-  forkIO $ parse
-  forkIO $ wait
+  forkIO parse
+  forkIO wait
   return () -- no need to "leak" the ThreadId
 
 handleNetwork :: MVar Int -> String -> IO ()
@@ -44,7 +44,7 @@ handleNetwork exit line =
           hPutStrLn stderr ("**Internal error: " ++ error)
 
 sendMessage :: Handle -> Message -> IO ()
-sendMessage server msg = (hPutStrLn server) (serializeMessage msg)
+sendMessage server msg = hPutStrLn server (serializeMessage msg)
 
 main = do
   putStrLn "Ready."
@@ -65,7 +65,7 @@ main = do
                            onEof  = exitWith ExitSuccess }
 
   exitCode <- takeMVar exit
-  putStrLn $ "Bye (" ++ (show exitCode) ++ ")"
+  putStrLn $ "Bye (" ++ show exitCode ++ ")"
   exitWith $ case exitCode of
                0 -> ExitSuccess
                _ -> ExitFailure exitCode
