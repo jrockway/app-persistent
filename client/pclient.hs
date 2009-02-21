@@ -47,7 +47,6 @@ sendMessage :: Handle -> Message -> IO ()
 sendMessage server msg = hPutStrLn server (serializeMessage msg)
 
 main = do
-  putStrLn "Ready."
   hSetBuffering stdin LineBuffering
   hSetBuffering stdout NoBuffering
   hSetBuffering stderr NoBuffering
@@ -65,7 +64,6 @@ main = do
                            onEof  = exitWith ExitSuccess }
 
   exitCode <- takeMVar exit
-  putStrLn $ "Bye (" ++ show exitCode ++ ")"
   exitWith $ case exitCode of
                0 -> ExitSuccess
                _ -> ExitFailure exitCode
