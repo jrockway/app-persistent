@@ -10,5 +10,9 @@ Cabal-Version: >= 1.2
 Executable pclient
   Main-is: pclient.hs
   Other-Modules: App.Persistent.Client.Message
+                 App.Persistent.Client.EventLoop
+                 App.Persistent.Client
   Build-Depends: base, network, json
   ghc-options:   -O
+
+
