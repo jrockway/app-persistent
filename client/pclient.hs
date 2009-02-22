@@ -35,13 +35,9 @@ startLoop reader handler  = do
 handleNetwork :: MVar Int -> String -> IO ()
 handleNetwork exit line =
     case unserializeMessage line of
-      Right message ->
-          case message of
-            NormalOutput str -> hPutStr stdout str
-            ErrorOutput  str -> hPutStr stderr str
-            Exit        code -> putMVar exit code
-      Left error ->
-          hPutStrLn stderr ("**Internal error: " ++ error)
+      NormalOutput str -> hPutStr stdout str
+      ErrorOutput  str -> hPutStr stderr str
+      Exit        code -> putMVar exit code
 
 sendMessage :: Handle -> Message -> IO ()
 sendMessage server msg = hPutStrLn server (serializeMessage msg)
@@ -55,13 +51,13 @@ main = do
   server <- connectTo "localhost" (PortNumber 1234)
   hSetBuffering server NoBuffering
 
-  startLoop (hGetChar stdin)
-            EventHandler { onRead = \c -> sendMessage server (KeyPress c),
-                           onEof  = sendMessage server (EndOfFile StdIn) }
-
   startLoop (hGetLine server)
             EventHandler { onRead = handleNetwork exit,
                            onEof  = exitWith ExitSuccess }
+
+  startLoop (hGetChar stdin)
+            EventHandler { onRead = \c -> sendMessage server (KeyPress c),
+                           onEof  = sendMessage server (EndOfFile StdIn) }
 
   exitCode <- takeMVar exit
   exitWith $ case exitCode of

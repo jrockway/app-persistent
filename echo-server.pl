@@ -22,28 +22,30 @@ my $s = tcp_server undef, 1234, sub {
     $reader = sub {
         my $handle = shift;
         my $obj = shift;
-        my ($type, $value) = map { $obj->{$_} } qw/type value/;
+        my ($type, $value) = %$obj;
 
         { no warnings 'uninitialized';
-          say "Got message.  Type: $type, value '$value'";
+          use JSON::XS;
+          say "Got message.  Type: $type, value:";
+          say JSON::XS->new->pretty->allow_nonref->encode($value);
         }
 
         given($type){
-            when('keyPress') {
-                my $char = chr $value;
+            when('KeyPress') {
+                my $char = $value;
                 given($char){
                     when("\n"){
-                        push_write($handle, 'normalOutput', "$buf\n");
+                        push_write($handle, 'NormalOutput', "$buf\n");
                         $buf = "";
                     }
                     default {
-                        $buf .= chr $value;
+                        $buf .= $char;
                     }
                 }
             }
-            when('endOfFile'){
-                push_write($handle, 'normalOutput', 'Exiting...');
-                push_write($handle, 'exit', 0);
+            when('EndOfFile'){
+                push_write($handle, 'NormalOutput', 'Exiting...');
+                push_write($handle, 'Exit', 0);
             }
         }
 
@@ -56,8 +58,7 @@ my $s = tcp_server undef, 1234, sub {
 sub push_write {
     my ($handle, $t, $v) = @_;
     $handle->push_write( json => {
-        type  => $t,
-        value => $v,
+        $t => $v,
     });
     $handle->push_write( "\r\n" );
 }
