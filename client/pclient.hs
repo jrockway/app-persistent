@@ -2,6 +2,7 @@ module Main where
 import Control.Concurrent
 import Control.Monad
 import Network
+import System.Environment
 import System.Exit
 import System.IO
 import System.IO.Error
@@ -42,6 +43,19 @@ handleNetwork exit line =
 sendMessage :: Handle -> Message -> IO ()
 sendMessage server msg = hPutStrLn server (serializeMessage msg)
 
+sendStartupInfo :: Handle -> IO ()
+sendStartupInfo server = do
+  p <- getProgName
+  a <- getArgs
+  e <- getEnvironment
+
+  mapM (sendMessage server)
+           [ ProgramName p
+           , CommandLineArgs a
+           , Environment e
+           ]
+  return ()
+
 main = do
   hSetBuffering stdin LineBuffering
   hSetBuffering stdout NoBuffering
@@ -50,6 +64,8 @@ main = do
   exit <- newEmptyMVar
   server <- connectTo "localhost" (PortNumber 1234)
   hSetBuffering server NoBuffering
+
+  sendStartupInfo server
 
   startLoop (hGetLine server)
             EventHandler { onRead = handleNetwork exit,
