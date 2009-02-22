@@ -23,6 +23,7 @@ data Message = KeyPress Char
              | ProgramName String
              | Environment [(String, String)]
              | CommandLineArgs [String]
+             | WorkingDirectory String
                -- messages we receive
              | NormalOutput String
              | ErrorOutput String

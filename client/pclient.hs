@@ -1,5 +1,6 @@
 module Main where
 import Control.Concurrent
+import Directory
 import Network
 import System.Environment
 import System.Exit
@@ -23,11 +24,13 @@ sendStartupInfo :: Handle -> [String] -> IO ()
 sendStartupInfo server args = do
   p <- getProgName
   e <- getEnvironment
+  d <- getCurrentDirectory
 
   mapM (sendMessage server)
            [ ProgramName p
            , CommandLineArgs args
            , Environment e
+           , WorkingDirectory d
            ]
   return ()
 

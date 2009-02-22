@@ -1,6 +1,6 @@
 Name:          App-Persistent-Client
 Version:       0.1
-Description:   Talk to an App::Persistent app
+Description:   Talk to an App::Persistent server
 License:       BSD3
 License-file:  LICENSE
 Author:        Jonathan Rockway
@@ -14,5 +14,3 @@ Executable pclient
                  App.Persistent.Client
   Build-Depends: base, network, json
   ghc-options:   -O
-
-
