@@ -1,7 +1,7 @@
 Name:          App-Persistent-Client
 Version:       0.1
 Description:   Talk to an App::Persistent server
-License:       BSD3
+License:       BSD4
 License-file:  LICENSE
 Author:        Jonathan Rockway
 Maintainer:    jon@jrock.us
@@ -12,5 +12,5 @@ Executable pclient
   Other-Modules: App.Persistent.Client.Message
                  App.Persistent.Client.EventLoop
                  App.Persistent.Client
-  Build-Depends: base, network, json, haskell98
+  Build-Depends: base, network, json, haskell98, base >= 4
   ghc-options:   -O

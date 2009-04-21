@@ -43,7 +43,7 @@ main = do
   let (ourArgs, theirArgs) = parseCmdLine cmdLineArgs
 
   exit <- newEmptyMVar
-  server <- connectTo "localhost" (PortNumber 1234)
+  server <- connectTo "127.0.0.1" (PortNumber 1234)
   hSetBuffering server NoBuffering
 
   sendStartupInfo server theirArgs
