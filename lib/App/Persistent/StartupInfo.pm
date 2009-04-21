@@ -44,10 +44,11 @@ class App::Persistent::StartupInfo {
     );
 
     has 'cmdline_args' => (
-        init_arg => 'CommandLineArgs',
-        is       => 'ro',
-        isa      => ArrayRef[Str],
-        required => 1,
+        init_arg   => 'CommandLineArgs',
+        is         => 'ro',
+        isa        => ArrayRef[Str],
+        auto_deref => 1,
+        required   => 1,
     );
 }
 
