@@ -50,6 +50,14 @@ class App::Persistent::StartupInfo {
         auto_deref => 1,
         required   => 1,
     );
+
+    has 'capabilities' => (
+        init_arg   => 'Capabilities',
+        is         => 'ro',
+        isa        => ArrayRef[Str],
+        auto_deref => 1,
+        required   => 1,
+    );
 }
 
 1;

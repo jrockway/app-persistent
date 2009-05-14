@@ -4,6 +4,7 @@ module App.Persistent.Client.Message
     (
      Message(..),
      StandardDescriptor(..),
+     Capability(..),
      serializeMessage,
      unserializeMessage,
     ) where
@@ -17,6 +18,9 @@ import Text.JSON.Generic
 data StandardDescriptor = StdIn | StdOut | StdErr | OtherDescriptor
                         deriving (Typeable, Data, Show, Eq)
 
+data Capability = Dumb | ShareTerminal String | Prompt
+                deriving (Typeable, Data, Show, Eq)
+
                -- messages we send
 data Message = KeyPress Char
              | EndOfFile StandardDescriptor
@@ -24,7 +28,9 @@ data Message = KeyPress Char
              | Environment [(String, String)]
              | CommandLineArgs [String]
              | WorkingDirectory String
+             | Capabilities [Capability]
                -- messages we receive
+             | EnableCapability [Capability]
              | NormalOutput String
              | ErrorOutput String
              | Exit Int

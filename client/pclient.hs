@@ -31,6 +31,7 @@ sendStartupInfo server args = do
            , CommandLineArgs args
            , Environment e
            , WorkingDirectory d
+           , Capabilities [Dumb]
            ]
   return ()
 

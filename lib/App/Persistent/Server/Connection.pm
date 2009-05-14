@@ -125,7 +125,7 @@ class App::Persistent::Server::Connection {
                 my ($k, $v) = %$msg;
                 $headers->{$k} = $v;
 
-                if (keys %$headers < 4) {
+                if (keys %$headers < 5) { # XXX: XXX
                     $handle->push_read( json => $read_headers );
                 } else {
                     $self->headers_ready->send(
