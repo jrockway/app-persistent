@@ -21,11 +21,12 @@ class App::Persistent::StartupInfo {
     };
 
     has 'environment' => (
-        init_arg => 'Environment',
-        is       => 'ro',
-        isa      => Environment,
-        required => 1,
-        coerce   => 1,
+        init_arg   => 'Environment',
+        is         => 'ro',
+        isa        => Environment,
+        required   => 1,
+        coerce     => 1,
+        auto_deref => 1,
     );
 
     has 'program_name' => (
