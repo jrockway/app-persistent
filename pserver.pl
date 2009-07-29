@@ -11,7 +11,7 @@ use EV;
 use App::Persistent::Server;
 
 my $server = App::Persistent::Server->new(
-    code => sub { warn "HELLO from $$"; exit 0; },
+    code => sub { use DDS; say Dump(\@_); say "HELLO from $$"; exit 0; },
 );
 
 $server->start;
