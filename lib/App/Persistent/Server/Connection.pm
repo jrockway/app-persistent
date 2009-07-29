@@ -66,12 +66,13 @@ class App::Persistent::Server::Connection {
     }
 
     method _mk_printer($read_handle, $type) {
-        my $printer; $printer = sub {
-            my ($handle, $data, $eol) = @_;
-            $self->write_json({ $type => "$data$eol" });
-            $handle->push_read( line => $printer );
-        };
-        $read_handle->push_read( line => $printer );
+        $read_handle->on_read(sub {
+            my $handle = shift;
+            my $data = delete $handle->{rbuf};
+            $self->write_json({ $type => "$data" });
+        });
+
+        # add support for relaying end of stdout/stderr?
     }
 
     method _build_running_app(){
