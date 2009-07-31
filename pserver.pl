@@ -11,7 +11,20 @@ use EV;
 use App::Persistent::Server;
 
 my $server = App::Persistent::Server->new(
-    code => sub { use DDS; say Dump(\@_); say "HELLO from $$"; exit 0; },
+    code => sub {
+        use DDS;
+
+        say Dump(\@_);
+        say "HELLO from $$";
+
+        local $| = 1;
+
+        while(my $line = do { print "> "; <> }){
+            print "You said: $line";
+        }
+
+        exit 0;
+    },
 );
 
 $server->start;
