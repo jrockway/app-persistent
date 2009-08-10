@@ -36,7 +36,8 @@ sendStartupInfo server args = do
   return ()
 
 main = do
-  hSetBuffering stdin LineBuffering
+  hSetBuffering stdin NoBuffering
+  hSetEcho stdin False
   hSetBuffering stdout NoBuffering
   hSetBuffering stderr NoBuffering
 

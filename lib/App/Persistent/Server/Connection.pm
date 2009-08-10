@@ -2,15 +2,13 @@ use MooseX::Declare;
 use feature 'switch';
 
 class App::Persistent::Server::Connection {
-    use namespace::autoclean;
-
     use AnyEvent;
     use AnyEvent::Handle;
     use AnyEvent::Subprocess;
 
     use App::Persistent::StartupInfo;
 
-    use MooseX::Types -declare => ['Handle','Condvar'];
+    use MooseX::Types -declare => ['Handle'];
     use MooseX::Types::Moose qw(GlobRef);
 
     class_type 'App::Persistent::Server';
@@ -22,8 +20,6 @@ class App::Persistent::Server::Connection {
     coerce Handle, from GlobRef, via {
         AnyEvent::Handle->new( fh => $_ );
     };
-
-    subtype Condvar, as 'AnyEvent::CondVar';
 
     has 'server' => (
         is       => 'ro',
@@ -37,27 +33,6 @@ class App::Persistent::Server::Connection {
         isa      => Handle,
         required => 1,
         coerce   => 1,
-    );
-
-    has 'headers_ready' => (
-        is       => 'ro',
-        isa      => Condvar,
-        required => 1,
-        default  => sub {
-            return AnyEvent->condvar;
-        },
-    );
-
-    has 'headers' => (
-        is         => 'ro',
-        isa        => 'App::Persistent::StartupInfo',
-        lazy_build => 1,
-    );
-
-    has 'running_app' => (
-        is         => 'ro',
-        isa        => 'AnyEvent::Subprocess::Running',
-        lazy_build => 1,
     );
 
     method write_json(HashRef $obj) {
@@ -75,73 +50,75 @@ class App::Persistent::Server::Connection {
         # add support for relaying end of stdout/stderr?
     }
 
-    method _build_running_app(){
-        my $headers = $self->headers;
-        my $subprocess = AnyEvent::Subprocess->new(
-            code             => sub { $self->server->code->($headers) },
-            before_fork_hook => sub {
-                my $run = shift;
-                $self->_mk_printer($run->stdout_handle, 'NormalOutput');
-                $self->_mk_printer($run->stderr_handle, 'ErrorOutput');
-
-                $run->completion_condvar->cb(
-                    sub {
-                        my ($cv) = @_;
-                        my $done = $cv->recv;
-                        $self->write_json({ 'Exit' => $done->exit_value });
-                    },
-                ),
-
-            }
-        );
-        return $subprocess->run;
-    }
-
-    method _build_headers(){
-        return $self->headers_ready->recv;
-    }
-
     method run(){
-        my $read; $read = sub {
+        # XXX: twisty maze of spaghetti!
+
+        my $ready = AnyEvent->condvar;
+        my $read_headers;
+
+        my $headers;
+        $read_headers = sub {
             my ($handle, $msg) = @_;
-            my ($type, $value) = %$msg;
+            my ($k, $v) = %$msg;
+            $headers->{$k} = $v;
 
-            given($type){
-                when('KeyPress'){
-                    $self->running_app->stdin_handle->push_write($value);
-                }
-                when('EndOfFile'){
-                    $self->running_app->close_stdin_handle;
-                }
+            my $info = eval {
+                App::Persistent::StartupInfo->new($headers);
+            };
+
+            if (!$info) {
+                $handle->push_read( json => $read_headers );
             }
+            else {
+                my $subprocess = AnyEvent::Subprocess->new_with_traits(
+                    traits           => ['Pty'],
+                    code             => sub { $self->server->code->($info) },
+                    before_fork_hook => sub {
+                        my $run = shift;
+                        $self->_mk_printer($run->pty_handle, 'NormalOutput');
 
-            $handle->push_read( json => $read );
+                        $run->completion_condvar->cb(
+                            sub {
+                                my ($cv) = @_;
+                                my $done = $cv->recv;
+
+                                # the JSON serializer confuses Haskell if we
+                                # don't 0+ the exit code.  (not sure why it
+                                # thinks it's a string)
+                                $self->write_json({ 'Exit' => 0+$done->exit_value });
+                                $self->socket->on_error( sub { } );
+                            },
+                        ),
+
+                    }
+                );
+
+                my $running_app = $subprocess->run;
+
+                my $read; $read = sub {
+                    my ($handle, $msg) = @_;
+                    my ($type, $value) = %$msg;
+
+                    given($type){
+                        when('KeyPress'){
+                            $running_app->pty_handle->push_write($value);
+                        }
+                        when('EndOfFile'){
+                            close $running_app->pty_handle->fh;
+                        }
+                    }
+
+                    $handle->push_read( json => $read );
+                };
+
+                $self->socket->on_error( sub { $running_app->kill } );
+                $self->socket->push_read( json => $read );
+            }
         };
 
-        my $read_headers;
-        {
-            my $headers;
-            $read_headers = sub {
-                my ($handle, $msg) = @_;
-                my ($k, $v) = %$msg;
-                $headers->{$k} = $v;
-
-                if (keys %$headers < 5) { # XXX: XXX
-                    $handle->push_read( json => $read_headers );
-                } else {
-                    $self->headers_ready->send(
-                        do {
-                            App::Persistent::StartupInfo->new($headers);
-                        },
-                    );
-                    $handle->push_read( json => $read );
-                }
-
-            };
-        }
-
         $self->socket->push_read( json => $read_headers );
-        return $self->running_app;
+
+        return; # leak nothing
     }
 }
 

@@ -18,9 +18,11 @@ my $server = App::Persistent::Server->new(
         say "HELLO from $$";
 
         local $| = 1;
+        use Term::ReadLine;
+        my $term = Term::ReadLine->new('pserver', \*STDIN, \*STDOUT);
 
-        while(my $line = do { print "> "; <> }){
-            print "You said: $line";
+        while(my $line = $term->readline('> ')){
+            print "You said: $line\n";
         }
 
         exit 0;
@@ -28,5 +30,5 @@ my $server = App::Persistent::Server->new(
 );
 
 $server->start;
+exit $server->completion_condvar->recv;
 
-exit $server->completion_condvar->wait;
