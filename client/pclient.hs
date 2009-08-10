@@ -1,5 +1,6 @@
 module Main where
 import Control.Concurrent
+import Data.List
 import Directory
 import Network
 import System.Environment
@@ -20,9 +21,10 @@ handleNetwork exit line =
 sendMessage :: Handle -> Message -> IO ()
 sendMessage server msg = hPutStrLn server (serializeMessage msg)
 
-sendStartupInfo :: Handle -> [String] -> IO ()
-sendStartupInfo server args = do
-  p <- getProgName
+-- XXX: this is starting to get unwieldy; refactor.
+sendStartupInfo :: Handle -> [String] -> String -> IO ()
+sendStartupInfo server args p = do
+  -- p <- getProgName
   e <- getEnvironment
   d <- getCurrentDirectory
 
@@ -42,13 +44,14 @@ main = do
   hSetBuffering stderr NoBuffering
 
   cmdLineArgs <- getArgs
-  let (ourArgs, theirArgs) = parseCmdLine cmdLineArgs
+  (ourArgs, theirArgs) <- parseCmdLine cmdLineArgs
 
   exit <- newEmptyMVar
-  server <- connectTo "127.0.0.1" (PortNumber 1234)
+  port <- getSocketPort ourArgs
+  server <- connectTo "" port
   hSetBuffering server NoBuffering
 
-  sendStartupInfo server theirArgs
+  sendStartupInfo server theirArgs (getAppName ourArgs)
 
   startLoop (hGetLine server)
             EventHandler { onRead = handleNetwork exit,

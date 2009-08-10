@@ -12,5 +12,5 @@ Executable pclient
   Other-Modules: App.Persistent.Client.Message
                  App.Persistent.Client.EventLoop
                  App.Persistent.Client
-  Build-Depends: base, network, json, haskell98, base >= 4
+  Build-Depends: base, unix, network, json, haskell98, base >= 4
   ghc-options:   -O
