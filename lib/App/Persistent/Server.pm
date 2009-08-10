@@ -80,30 +80,6 @@ class App::Persistent::Server {
         },
     );
 
-    method _build_control_server_guard(){
-        return tcp_server undef, 1235, sub {
-            my ($fh, $host, $port) =  @_;
-
-            my $handle = AnyEvent::Handle->new(
-                fh => $fh,
-            );
-
-            my $reader; $reader = sub {
-                my ($handle, $msg) = @_;
-                given($msg->{type}){
-                    when('Exit'){
-                        $self->completion_condvar->send();
-                    }
-                    # TODO: status, forcible kill, etc.
-                    default {
-                        $handle->push_read( json => $reader );
-                    }
-                }
-            };
-            $handle->push_read( json => $reader );
-        };
-    }
-
     method _build_server_guard() {
         mkdir $self->socket_directory;
         chmod 0700, $self->socket_directory;
@@ -128,6 +104,6 @@ class App::Persistent::Server {
 
     method start() {
         print "Starting server\n";
-        return ($self->server_guard, $self->control_server_guard);
+        return $self->server_guard;
     }
 }
