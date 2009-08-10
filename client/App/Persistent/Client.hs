@@ -43,7 +43,7 @@ parseOurArgs args =
     case getOpt RequireOrder options args of
       (o,n,[]  ) -> return o
       (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))
-        where header = "Usage: pclient +PC [OPTION...] -PC [SERVER ARGS...] ("
+        where header = "Usage: pclient +PC [OPTION...] -PC [SERVER ARGS...]"
 
 getAppName :: [Flag] -> String
 getAppName flags =
