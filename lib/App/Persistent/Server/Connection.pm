@@ -77,6 +77,9 @@ class App::Persistent::Server::Connection {
                         my $run = shift;
                         $self->_mk_printer($run->pty_handle, 'NormalOutput');
 
+                        # TODO: clone the pclient's winsize, not the parent's
+                        $run->pty_handle->fh->slave->clone_winsize_from(\*STDIN);
+
                         $run->completion_condvar->cb(
                             sub {
                                 my ($cv) = @_;
