@@ -56,7 +56,7 @@ main = do
 
   netReaders <- startLoop exit (hGetLine server)
                 EventHandler { onRead = handleNetwork exit,
-                               onEof  = exitWith ExitSuccess }
+                               onEof  = putMVar exit 255 }
 
   stdinReaders <- startLoop exit (hGetChar stdin)
                   EventHandler { onRead = \c -> sendMessage server (KeyPress c),
