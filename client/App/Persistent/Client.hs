@@ -55,7 +55,7 @@ getAppName flags =
       Just (AppName name) -> name
       Nothing -> defaultAppName
 
-getSocketPort :: [Flag] -> IO PortID
+getSocketPort :: [Flag] -> IO (String, PortID)
 getSocketPort flags = do
     username <- getEffectiveUserName
-    return (UnixSocket ("/tmp/pserver-" ++ username ++ "/" ++ (getAppName flags)))
+    return ("", UnixSocket ("/tmp/pserver-" ++ username ++ "/" ++ (getAppName flags)))

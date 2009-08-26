@@ -48,8 +48,8 @@ main = do
   (ourArgs, theirArgs) <- parseCmdLine cmdLineArgs
 
   exit <- newEmptyMVar
-  port <- getSocketPort ourArgs
-  server <- connectTo "" port
+  (host, port) <- getSocketPort ourArgs
+  server <- connectTo host port
   hSetBuffering server NoBuffering
 
   sendStartupInfo server theirArgs (getAppName ourArgs)
