@@ -70,44 +70,60 @@ class App::Persistent::Server::Connection {
                 $handle->push_read( json => $read_headers );
             }
             else {
-                my $subprocess = AnyEvent::Subprocess->new_with_traits(
-                    traits           => ['Pty'],
-                    code             => sub { $self->server->code->($info) },
-                    before_fork_hook => sub {
-                        my $run = shift;
-                        $self->_mk_printer($run->pty_handle, 'NormalOutput');
+                my $subprocess = AnyEvent::Subprocess->new(
+                    code      => sub { $self->server->code->($info) },
+                    delegates => [
+                        'Pty',
+                        { 'Handle' => {
+                            name      => 'stderr',
+                            direction => 'r',
+                            replace   => \*STDERR,
+                        }},
+                        { 'Callback' => {
+                            name              => 'callbacks',
+                            parent_setup_hook => sub {
+                                my ($proc, $run) = @_;
+                                $self->_mk_printer(
+                                    $run->delegate('pty')->handle, 'NormalOutput',
+                                );
 
-                        # TODO: clone the pclient's winsize, not the parent's
-                        $run->pty_handle->fh->slave->clone_winsize_from(\*STDIN);
+                                $self->_mk_printer(
+                                    $run->delegate('stderr')->handle, 'ErrorOutput',
+                                );
 
-                        $run->completion_condvar->cb(
-                            sub {
-                                my ($cv) = @_;
-                                my $done = $cv->recv;
+                                # TODO: clone the pclient's winsize, not the parent's
+                                $run->delegate('pty')->handle->fh->slave->clone_winsize_from(\*STDIN);
 
-                                # the JSON serializer confuses Haskell if we
-                                # don't 0+ the exit code.  (not sure why it
-                                # thinks it's a string)
-                                $self->write_json({ 'Exit' => 0+$done->exit_value });
-                                $self->socket->on_error( sub { } );
-                            },
-                        ),
+                                $run->completion_condvar->cb(
+                                    sub {
+                                        my ($cv) = @_;
+                                        my $done = $cv->recv;
 
-                    }
+                                        # the JSON serializer confuses Haskell if we
+                                        # don't 0+ the exit code.  (not sure why it
+                                        # thinks it's a string)
+                                        $self->write_json({
+                                            'Exit' => 0+$done->exit_value,
+                                        });
+                                        $self->socket->on_error( sub { } );
+                                    },
+                                ),
+                            }
+                        },
+                      },
+                    ],
                 );
-
                 my $running_app = $subprocess->run;
 
                 my $read; $read = sub {
                     my ($handle, $msg) = @_;
                     my ($type, $value) = %$msg;
-
                     given($type){
                         when('KeyPress'){
-                            $running_app->pty_handle->push_write($value);
+                            $running_app->delegate('pty')->handle->push_write($value);
                         }
                         when('EndOfFile'){
-                            close $running_app->pty_handle->fh;
+                            close $running_app->delegate('pty')->handle->fh;
                         }
                     }
 

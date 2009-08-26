@@ -91,7 +91,7 @@ class App::Persistent::Server {
         return tcp_server 'unix/', $self->socket_file->stringify, sub {
             my ($fh, $host, $port) =  @_;
 
-            print "Got connection from $host:$port\n";
+            print "Got connection\n";
 
             my $connection = App::Persistent::Server::Connection->new(
                 socket => $fh,
