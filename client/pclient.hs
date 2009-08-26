@@ -1,5 +1,6 @@
 module Main where
 import Control.Concurrent
+import Control.Monad (mapM)
 import Data.List
 import Directory
 import Network
@@ -53,15 +54,16 @@ main = do
 
   sendStartupInfo server theirArgs (getAppName ourArgs)
 
-  startLoop (hGetLine server)
-            EventHandler { onRead = handleNetwork exit,
-                           onEof  = exitWith ExitSuccess }
+  netReaders <- startLoop exit (hGetLine server)
+                EventHandler { onRead = handleNetwork exit,
+                               onEof  = exitWith ExitSuccess }
 
-  startLoop (hGetChar stdin)
-            EventHandler { onRead = \c -> sendMessage server (KeyPress c),
-                           onEof  = sendMessage server (EndOfFile StdIn) }
+  stdinReaders <- startLoop exit (hGetChar stdin)
+                  EventHandler { onRead = \c -> sendMessage server (KeyPress c),
+                                 onEof  = sendMessage server (EndOfFile StdIn) }
 
   exitCode <- takeMVar exit
+  mapM killThread (netReaders ++ stdinReaders)
   exitWith $ case exitCode of
                0 -> ExitSuccess
                _ -> ExitFailure exitCode
