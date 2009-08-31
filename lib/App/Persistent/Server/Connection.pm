@@ -71,7 +71,18 @@ class App::Persistent::Server::Connection {
             }
             else {
                 my $subprocess = AnyEvent::Subprocess->new(
-                    code      => sub { $self->server->code->($info) },
+                    code          => sub { $self->server->code->($info) },
+                    on_completion => sub {
+                        my $done = shift;
+
+                        # the JSON serializer confuses Haskell if we
+                        # don't 0+ the exit code.  (not sure why it
+                        # thinks it's a string)
+                        $self->write_json({
+                            'Exit' => 0+$done->exit_value,
+                        });
+                        $self->socket->on_error( sub { } );
+                    },
                     delegates => [
                         'Pty',
                         { 'Handle' => {
@@ -80,7 +91,6 @@ class App::Persistent::Server::Connection {
                             replace   => \*STDERR,
                         }},
                         { 'Callback' => {
-                            name              => 'callbacks',
                             parent_setup_hook => sub {
                                 my ($proc, $run) = @_;
                                 $self->_mk_printer(
@@ -94,21 +104,7 @@ class App::Persistent::Server::Connection {
                                 # TODO: clone the pclient's winsize, not the parent's
                                 $run->delegate('pty')->handle->fh->slave->clone_winsize_from(\*STDIN);
 
-                                $run->completion_condvar->cb(
-                                    sub {
-                                        my ($cv) = @_;
-                                        my $done = $cv->recv;
-
-                                        # the JSON serializer confuses Haskell if we
-                                        # don't 0+ the exit code.  (not sure why it
-                                        # thinks it's a string)
-                                        $self->write_json({
-                                            'Exit' => 0+$done->exit_value,
-                                        });
-                                        $self->socket->on_error( sub { } );
-                                    },
-                                ),
-                            }
+                            },
                         },
                       },
                     ],
