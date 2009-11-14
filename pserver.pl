@@ -12,7 +12,7 @@ use App::Persistent::Server;
 
 my $server = App::Persistent::Server->new(
     code => sub {
-        use DDS;
+        use Data::Dump::Streamer;
 
         say Dump(\@_);
         say "HELLO from $$";
