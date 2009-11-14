@@ -10,11 +10,14 @@ connect(SERVER, sockaddr_un('/tmp/pserver-pawel/pserver'));
 sub input {
     my ($rin,$win,$ein);
     $rin = $win = $ein = '';
-    #vec($rin,fileno(STDIN),1) = 1;
     vec($rin,fileno(SERVER),1) = 1;
     $ein = $rin | $win;
     my $select = select($rin,$win,$ein,0);
     $select;
+}
+sub command {
+    my ($command) = shift;
+    print SERVER encode_json($command)."\n";
 }
 
 my $oldfh = select(SERVER);
@@ -32,16 +35,19 @@ ReadMode 4;
 while (1) {
     while (input()) {
         my $input = decode_json(scalar <SERVER>);
-        if ($input->{NormalOutput}) {
+        if (defined $input->{NormalOutput}) {
             print $input->{NormalOutput};
+        } elsif (defined $input->{Exit}) {
+            exit $input->{Exit};
+        } elsif (defined $input->{ErrorOutput}) {
+            print STDERR $input->{ErrorOutput};
         } else {
             print Dumper($input);
         }
     }
     my $key = ReadKey -1;
     if (defined $key) {
-        #last if $key eq 'q';
-        print SERVER encode_json({KeyPress=>$key})."\n";
+        command {KeyPress=>$key};
     }
 }
 END { ReadMode 0 }
