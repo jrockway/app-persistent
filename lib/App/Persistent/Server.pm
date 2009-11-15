@@ -107,3 +107,39 @@ class App::Persistent::Server {
         return $self->server_guard;
     }
 }
+
+__END__
+=head1 NAME
+
+App::Persistent::Server
+
+=head1 SYNOPSIS
+
+  use App::Persistent::Server;
+  my $server = App::Persistent::Server->new(
+      name => 'foo',
+      code => sub {
+         while(1){
+             local $| = 1;
+             print "> ";
+             my $line = <>;
+             print "You said: $line";
+             exit 0 if $line =~ /quit/;
+         };
+      },
+  );
+  
+  $server->start;
+  exit $server->completion_condvar->wait;
+
+=head1 METHODS
+
+=over 4
+
+=item B<new>
+
+=item B<start>
+
+Start the server.
+
+=back
