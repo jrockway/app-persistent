@@ -2,6 +2,7 @@ use MooseX::Declare;
 use feature 'switch';
 
 class App::Persistent::Server {
+# ABSTRACT: make your app persistent
     use MooseX::Types::Moose qw(CodeRef Str);
     use MooseX::Types::Path::Class qw(Dir File);
     use MooseX::Types::Set::Object;
