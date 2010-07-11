@@ -7,6 +7,8 @@ import Network
 import System.Environment
 import System.Exit
 import System.IO
+import System.Posix.IO (stdInput)
+import qualified System.Posix.Terminal as Term
 
 import App.Persistent.Client.Message
 import App.Persistent.Client.EventLoop
@@ -38,11 +40,22 @@ sendStartupInfo server args p = do
            ]
   return ()
 
+setTermAttr :: Term.TerminalMode -> Bool -> IO ()
+setTermAttr attr with = do
+  term <- Term.getTerminalAttributes stdInput
+  Term.setTerminalAttributes stdInput (f term attr) Term.Immediately
+      where f = case with of
+                  True -> Term.withMode
+                  False -> Term.withoutMode
+
+
 main = do
   hSetBuffering stdin NoBuffering
   hSetEcho stdin False
   hSetBuffering stdout NoBuffering
   hSetBuffering stderr NoBuffering
+
+  setTermAttr Term.KeyboardInterrupts False
 
   cmdLineArgs <- getArgs
   (ourArgs, theirArgs) <- parseCmdLine cmdLineArgs
